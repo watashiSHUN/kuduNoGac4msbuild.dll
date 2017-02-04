@@ -5,37 +5,38 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Build.Construction;
 
 namespace Kudu.Core.Infrastructure
 {
     [DebuggerDisplay("{ProjectName}")]
     public class VsSolutionProject
     {
-        private const string ProjectInSolutionTypeName = "Microsoft.Build.Construction.ProjectInSolution, Microsoft.Build, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a";
+        //private const string ProjectInSolutionTypeName = "Microsoft.Build.Construction.ProjectInSolution, Microsoft.Build, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a";
 
-        private static readonly Type _projectInSolutionType;
-        private static readonly PropertyInfo _projectNameProperty;
-        private static readonly PropertyInfo _relativePathProperty;
-        private static readonly PropertyInfo _projectTypeProperty;
-        private static readonly PropertyInfo _projectExtensionProperty;
-        private static readonly PropertyInfo _aspNetConfigurationsProperty;
+        //private static readonly Type _projectInSolutionType;
+        //private static readonly PropertyInfo _projectNameProperty;
+        //private static readonly PropertyInfo _relativePathProperty;
+        //private static readonly PropertyInfo _projectTypeProperty;
+        //private static readonly PropertyInfo _projectExtensionProperty;
+        //private static readonly PropertyInfo _aspNetConfigurationsProperty;
 
-        static VsSolutionProject()
-        {
-            _projectInSolutionType = Type.GetType(ProjectInSolutionTypeName, throwOnError: false, ignoreCase: false);
+        //static VsSolutionProject()
+        //{
+        //    _projectInSolutionType = Type.GetType(ProjectInSolutionTypeName, throwOnError: false, ignoreCase: false);
 
-            if (_projectInSolutionType != null)
-            {
-                _projectNameProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "ProjectName");
-                _relativePathProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "RelativePath");
-                _projectTypeProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "ProjectType");
-                _projectExtensionProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "Extension");
-                _aspNetConfigurationsProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "AspNetConfigurations");
-            }
-        }
+        //    if (_projectInSolutionType != null)
+        //    {
+        //        _projectNameProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "ProjectName");
+        //        _relativePathProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "RelativePath");
+        //        _projectTypeProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "ProjectType");
+        //        _projectExtensionProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "Extension");
+        //        _aspNetConfigurationsProperty = ReflectionUtility.GetInternalProperty(_projectInSolutionType, "AspNetConfigurations");
+        //    }
+        //}
 
         private readonly string _solutionPath;
-        private readonly object _projectInstance;
+        private readonly ProjectInSolution _projectInstance;
 
         private bool _isWap;
         private bool _isWebSite;
@@ -110,7 +111,7 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public VsSolutionProject(string solutionPath, object project)
+        public VsSolutionProject(string solutionPath, ProjectInSolution project)
         {
             _solutionPath = solutionPath;
             _projectInstance = project;
@@ -123,10 +124,14 @@ namespace Kudu.Core.Infrastructure
                 return;
             }
 
-            _projectName = _projectNameProperty.GetValue<string>(_projectInstance);
-            var projectType = _projectTypeProperty.GetValue<SolutionProjectType>(_projectInstance);
-            var projectExtension = _projectExtensionProperty.GetValue<string>(_projectInstance);
-            var relativePath = _relativePathProperty.GetValue<string>(_projectInstance);
+            //_projectName = _projectNameProperty.GetValue<string>(_projectInstance);
+            _projectName = _projectInstance.ProjectName;
+            //var projectType = _projectTypeProperty.GetValue<SolutionProjectType>(_projectInstance);
+            var projectType = _projectInstance.ProjectType;
+            //var projectExtension = _projectExtensionProperty.GetValue<string>(_projectInstance);
+            var projectExtension = (string)typeof(ProjectInSolution).GetProperty("Extension", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(_projectInstance);
+            //var relativePath = _relativePathProperty.GetValue<string>(_projectInstance);
+            var relativePath = _projectInstance.RelativePath;
             _isWebSite = projectType == SolutionProjectType.WebProject;
 
             // When using websites with IISExpress, the relative path property becomes a URL.
@@ -136,8 +141,8 @@ namespace Kudu.Core.Infrastructure
             Uri uri;
             if (_isWebSite && Uri.TryCreate(relativePath, UriKind.Absolute, out uri))
             {
-                var aspNetConfigurations = _aspNetConfigurationsProperty.GetValue<Hashtable>(_projectInstance);
-
+                //var aspNetConfigurations = _aspNetConfigurationsProperty.GetValue<Hashtable>(_projectInstance);
+                var aspNetConfigurations = (Hashtable)typeof(ProjectInSolution).GetProperty("AspNetConfigurations", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(_projectInstance);
                 // Use the release configuraiton and debug if it isn't available
                 object configurationObject = aspNetConfigurations["Release"] ?? aspNetConfigurations["Debug"];
 
@@ -184,14 +189,14 @@ namespace Kudu.Core.Infrastructure
         }
 
         // Microsoft.Build.Construction.SolutionProjectType
-        private enum SolutionProjectType
-        {
-            Unknown,
-            KnownToBeMSBuildFormat,
-            SolutionFolder,
-            WebProject,
-            WebDeploymentProject,
-            EtpSubProject,
-        }
+        //private enum SolutionProjectType
+        //{
+        //    Unknown,
+        //    KnownToBeMSBuildFormat,
+        //    SolutionFolder,
+        //    WebProject,
+        //    WebDeploymentProject,
+        //    EtpSubProject,
+        //}
     }
 }
